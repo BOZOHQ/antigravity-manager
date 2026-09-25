@@ -163,31 +163,53 @@ fn open_browser(url: String) -> Result<(), String> {
 // Application Bootstrap
 // ==========================================
 
-fn main() {
-    tracing_subscriber::fmt::init();
-
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("app_startup.log") {
-        use std::io::Write;
-        let _ = writeln!(f, "[STARTUP] Application booting at {:?}", chrono::Utc::now());
+fn get_debug_log_path() -> std::path::PathBuf {
+    if let Ok(app_data) = std::env::var("APPDATA") {
+        let dir = std::path::PathBuf::from(app_data).join("AntigravityManager");
+        let _ = std::fs::create_dir_all(&dir);
+        return dir.join("debug.log");
     }
+    std::path::PathBuf::from("debug.log")
+}
+
+fn log_debug(msg: &str) {
+    let p = get_debug_log_path();
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(p) {
+        use std::io::Write;
+        let _ = writeln!(f, "[{}] {}", chrono::Utc::now(), msg);
+    }
+}
+
+fn main() {
+    std::panic::set_hook(Box::new(|panic_info| {
+        log_debug(&format!("CRITICAL PANIC: {}", panic_info));
+    }));
+
+    tracing_subscriber::fmt::init();
+    log_debug("Application booting");
 
     let app_state = Arc::new(AppState::new());
     let proxy_state = Arc::clone(&app_state);
 
     // Spawn Background Axum Proxy Service on dedicated Tokio Runtime
     std::thread::spawn(move || {
+        log_debug("Spawning background proxy thread");
         if let Ok(rt) = tokio::runtime::Runtime::new() {
+            log_debug("Tokio runtime created successfully");
             rt.block_on(async move {
+                log_debug("Entering rt.block_on start_proxy_server");
                 if let Err(e) = proxy::start_proxy_server(proxy_state).await {
-                    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("app_startup.log") {
-                        use std::io::Write;
-                        let _ = writeln!(f, "[PROXY SERVER ERROR] {:?}", e);
-                    }
+                    log_debug(&format!("PROXY SERVER TERMINATED WITH ERROR: {:?}", e));
+                } else {
+                    log_debug("PROXY SERVER TERMINATED CLEANLY");
                 }
             });
+        } else {
+            log_debug("FAILED TO CREATE TOKIO RUNTIME");
         }
     });
 
+    log_debug("Starting tauri::Builder run");
     let res = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(app_state)
@@ -202,10 +224,8 @@ fn main() {
         ])
         .run(tauri::generate_context!());
 
-    if let Err(e) = res {
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("app_startup.log") {
-            use std::io::Write;
-            let _ = writeln!(f, "[TAURI RUN ERROR] {:?}", e);
-        }
+    match res {
+        Ok(_) => log_debug("Tauri run completed cleanly (window closed)"),
+        Err(e) => log_debug(&format!("TAURI RUN RETURNED ERROR: {:?}", e)),
     }
 }

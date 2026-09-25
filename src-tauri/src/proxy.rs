@@ -264,36 +264,43 @@ pub struct AppState {
 }
 
 fn get_accounts_path() -> PathBuf {
-    let candidates = [
-        PathBuf::from("accounts.json"),
-        PathBuf::from("../accounts.json"),
-        PathBuf::from("../../accounts.json"),
-    ];
+    // 1. Primary canonical location: %APPDATA%\AntigravityManager\accounts.json
+    if let Ok(app_data) = std::env::var("APPDATA") {
+        let dir = PathBuf::from(app_data).join("AntigravityManager");
+        let _ = fs::create_dir_all(&dir);
+        let canonical_file = dir.join("accounts.json");
 
-    for c in &candidates {
-        if c.exists() {
-            return c.clone();
-        }
-    }
+        // If canonical file does not exist or has no accounts, search other known locations to migrate
+        let needs_import = if canonical_file.exists() {
+            fs::metadata(&canonical_file).map(|m| m.len() < 20).unwrap_or(true)
+        } else {
+            true
+        };
 
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let candidate = dir.join("accounts.json");
-            if candidate.exists() {
-                return candidate;
+        if needs_import {
+            let potential_sources = [
+                // Source A: current working directory
+                PathBuf::from("accounts.json"),
+                // Source B: next to running executable
+                std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.join("accounts.json"))).unwrap_or_else(|| PathBuf::from("non_existent")),
+                // Source C: Downloads folder
+                std::env::var("USERPROFILE").map(|h| PathBuf::from(h).join("Downloads").join("antigravity acc switch").join("accounts.json")).unwrap_or_else(|_| PathBuf::from("non_existent")),
+                // Source D: .gemini folder
+                std::env::var("USERPROFILE").map(|h| PathBuf::from(h).join(".gemini").join("antigravity_switch").join("accounts.json")).unwrap_or_else(|_| PathBuf::from("non_existent")),
+            ];
+
+            for src in &potential_sources {
+                if src.exists() && fs::metadata(src).map(|m| m.len() > 20).unwrap_or(false) {
+                    if let Ok(content) = fs::read_to_string(src) {
+                        let _ = fs::write(&canonical_file, content);
+                        tracing::info!("[PERSISTENCE] Successfully migrated accounts from {:?} to canonical path {:?}", src, canonical_file);
+                        break;
+                    }
+                }
             }
-            let parent_cand = dir.join("..").join("accounts.json");
-            if parent_cand.exists() {
-                return parent_cand;
-            }
         }
-    }
 
-    if let Ok(home) = std::env::var("USERPROFILE") {
-        let global_p = PathBuf::from(home).join(".gemini").join("antigravity_switch").join("accounts.json");
-        if global_p.exists() {
-            return global_p;
-        }
+        return canonical_file;
     }
 
     PathBuf::from("accounts.json")
@@ -463,8 +470,12 @@ fn save_account_to_disk(email: &str, name: &str, refresh_token: &str, access_tok
         }
     }
 
-    // Also sync to global directory if exists
+    // Also sync to global directory and downloads folder if exists
     if let Ok(home) = std::env::var("USERPROFILE") {
+        let dl_p = PathBuf::from(&home).join("Downloads").join("antigravity acc switch").join("accounts.json");
+        if dl_p.exists() && dl_p != p {
+            let _ = fs::write(dl_p, &json_str);
+        }
         let global_p = PathBuf::from(home).join(".gemini").join("antigravity_switch").join("accounts.json");
         if let Some(parent) = global_p.parent() {
             let _ = fs::create_dir_all(parent);
@@ -537,6 +548,7 @@ pub async fn start_proxy_server(app_state: Arc<AppState>) -> Result<(), Box<dyn 
     };
 
     let bind_addr: SocketAddr = format!("{}:{}", if ip == "192.168.1.106" { "0.0.0.0" } else { &ip }, port).parse()?;
+    crate::log_debug(&format!("start_proxy_server: configured bind_addr={}", bind_addr));
     let router = create_proxy_router(app_state.clone());
 
     let (tx, rx) = oneshot::channel::<()>();
@@ -560,7 +572,8 @@ pub async fn start_proxy_server(app_state: Arc<AppState>) -> Result<(), Box<dyn 
                 if line.contains(&target_str) && line.contains("LISTENING") {
                     if let Some(pid_str) = line.split_whitespace().last() {
                         if let Ok(pid) = pid_str.parse::<u32>() {
-                            if pid != my_pid && pid > 0 {
+                            if pid != my_pid && pid > 4 {
+                                crate::log_debug(&format!("start_proxy_server: killing occupying PID {}", pid));
                                 let _ = std::process::Command::new("taskkill")
                                     .args(&["/F", "/PID", &pid.to_string()])
                                     .creation_flags(0x08000000)
@@ -577,9 +590,13 @@ pub async fn start_proxy_server(app_state: Arc<AppState>) -> Result<(), Box<dyn 
     let mut attempts = 0;
     let listener = loop {
         match tokio::net::TcpListener::bind(bind_addr).await {
-            Ok(l) => break l,
+            Ok(l) => {
+                crate::log_debug(&format!("start_proxy_server: successfully bound TcpListener on {}", bind_addr));
+                break l;
+            }
             Err(e) => {
                 attempts += 1;
+                crate::log_debug(&format!("start_proxy_server: bind attempt {} failed: {:?}", attempts, e));
                 if attempts > 5 {
                     return Err(Box::new(e));
                 }
@@ -588,6 +605,7 @@ pub async fn start_proxy_server(app_state: Arc<AppState>) -> Result<(), Box<dyn 
         }
     };
     tracing::info!("[ANTIGRAVITY PROXY] Listening on http://{}", bind_addr);
+    crate::log_debug(&format!("start_proxy_server: now running axum::serve on {}", bind_addr));
 
     // Periodic Quota Refresher Task for all accounts (runs every 60s)
     let refresher_state = app_state.clone();
@@ -635,9 +653,10 @@ pub async fn start_proxy_server(app_state: Arc<AppState>) -> Result<(), Box<dyn 
     axum::serve(listener, router)
         .with_graceful_shutdown(async {
             rx.await.ok();
-            tracing::info!("[ANTIGRAVITY PROXY] Shutdown sequence completed.");
+            crate::log_debug("start_proxy_server: rx triggered, shutting down axum!");
         })
         .await?;
+    crate::log_debug("start_proxy_server: axum::serve completed");
 
     Ok(())
 }

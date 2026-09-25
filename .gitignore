@@ -24,3 +24,9 @@ yarn-debug.log*
 # Node / Tools
 node_modules/
 dist/node_modules/
+
+# Local Executables & Test Caches
+*.exe
+last_oauth.json
+real_quota.json
+debug.log

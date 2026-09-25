@@ -1370,7 +1370,37 @@ document.addEventListener('DOMContentLoaded', () => {
           renderAccountsGrid();
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          window.__TAURI__.core.invoke('get_accounts').then(rawAccounts => {
+            if (rawAccounts && Array.isArray(rawAccounts) && rawAccounts.length > 0) {
+              state.accounts = rawAccounts.map((a, idx) => ({
+                id: a.id,
+                email: a.email,
+                name: a.name || a.email.split('@')[0],
+                avatarColor: a.avatar_color || '#2563eb',
+                initials: a.initials || a.email.substring(0, 2).toUpperCase(),
+                provider: "GOOGLE",
+                isActive: a.is_active,
+                hasToken: true,
+                statusKey: a.is_active ? "active_now" : "connected_windows",
+                lastUsed: a.last_used || "Session liée",
+                quotas: {
+                  gemini: {
+                    weekly: { percentage: a.gemini_quota.weekly.percentage, resetsIn: a.gemini_quota.weekly.resets_in },
+                    fiveHour: { percentage: a.gemini_quota.five_hour.percentage, resetsIn: a.gemini_quota.five_hour.resets_in }
+                  },
+                  claudeGpt: {
+                    weekly: { percentage: a.claude_gpt_quota.weekly.percentage, resetsIn: a.claude_gpt_quota.weekly.resets_in },
+                    fiveHour: { percentage: a.claude_gpt_quota.five_hour.percentage, resetsIn: a.claude_gpt_quota.five_hour.resets_in }
+                  }
+                }
+              }));
+              renderAccountsGrid();
+            }
+          }).catch(() => {});
+        }
+      });
   }
 
   // Initial load
