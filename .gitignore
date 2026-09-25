@@ -1,0 +1,26 @@
+# Credentials & Private Data
+accounts.json
+*.token
+*.key
+.env
+
+# Rust & Tauri Build Artifacts
+**/target/
+src-tauri/target/
+*.pdb
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Node / Tools
+node_modules/
+dist/node_modules/

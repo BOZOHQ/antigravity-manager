@@ -1,0 +1,418 @@
+/* Antigravity Modern Design System (Light & Dark Theme Engine) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* DARK THEME (DEFAULT) */
+  --bg-root: #111213;
+  --bg-surface: #18191a;
+  --bg-surface-elevated: #212224;
+  --bg-surface-hover: #2c2d30;
+  --border-subtle: #2d2f33;
+  --border-focus: #70a5f7;
+  --accent-blue: #70a5f7;
+  --accent-blue-subtle: rgba(112, 165, 247, 0.12);
+  --quota-healthy: #4ade80;
+  --quota-warning: #fbbf24;
+  --quota-critical: #f87171;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  --titlebar-bg: #111213;
+}
+
+/* LIGHT THEME */
+html.light {
+  --bg-root: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f1f5f9;
+  --bg-surface-hover: #e2e8f0;
+  --border-subtle: #e2e8f0;
+  --border-focus: #3b82f6;
+  --accent-blue: #2563eb;
+  --accent-blue-subtle: rgba(37, 99, 235, 0.08);
+  --quota-healthy: #16a34a;
+  --quota-warning: #d97706;
+  --quota-critical: #dc2626;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+  --titlebar-bg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Master Smooth Theme Engine (Surface and component morphing) */
+body, header, aside, main, 
+.app-surface, .app-elevated, 
+.account-card, .tab-btn, button, 
+.modal-content, .titlebar-drag-region {
+  transition: background-color 0.26s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.26s cubic-bezier(0.16, 1, 0.3, 1), 
+              color 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Instant smooth theme morphing mode */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important,
+              border-color 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important,
+              color 0.26s cubic-bezier(0.4, 0, 0.2, 1) !important,
+              box-shadow 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition-delay: 0s !important;
+}
+
+body {
+  background-color: var(--bg-root);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  letter-spacing: -0.012em;
+}
+
+.mono-font {
+  font-family: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Window Drag Region */
+.titlebar-drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+  background-color: var(--titlebar-bg);
+  border-color: var(--border-subtle);
+  transition: background-color 0.26s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Completely Hide All Scrollbars (Zero Scrolling Stutter) */
+::-webkit-scrollbar {
+  display: none;
+  width: 0px;
+  height: 0px;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* SVG Circular Gauges with Elastic Sweep */
+.gauge-ring-bg {
+  stroke: var(--bg-surface-elevated);
+  transition: stroke 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gauge-ring-progress {
+  transition: stroke-dashoffset 0.85s cubic-bezier(0.34, 1.4, 0.64, 1), 
+              stroke 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  stroke-linecap: round;
+}
+
+/* Pulsing Status Dot */
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.28);
+    opacity: 0.72;
+  }
+}
+
+.pulsing-indicator {
+  animation: pulse-dot 2.2s infinite ease-in-out;
+}
+
+/* Tactile Micro-Interactions (Smooth, Snappy & Responsive) */
+button, select, .tab-btn, .net-pill {
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), 
+              background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.16s ease,
+              filter 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+button:hover, .tab-btn:hover, .net-pill:hover {
+  filter: brightness(1.03);
+}
+
+button:active, .tab-btn:active, .net-pill:active {
+  transform: scale(0.965);
+}
+
+/* Custom Sleek Checkbox */
+input[type="checkbox"]:not(.smooth-switch input) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-subtle);
+  background-color: var(--bg-surface-elevated);
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:not(.smooth-switch input):hover {
+  border-color: var(--accent-blue);
+}
+
+input[type="checkbox"]:not(.smooth-switch input):checked {
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+input[type="checkbox"]:not(.smooth-switch input):checked::after {
+  content: '';
+  position: absolute;
+  left: 4.5px;
+  top: 1.5px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Account Card Physics */
+.account-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              background-color 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.26s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+.account-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.22);
+}
+
+html.light .account-card:hover {
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.08);
+}
+
+.account-card:active {
+  transform: translateY(-1px) scale(0.992);
+}
+
+.account-card-active {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 25px -4px var(--accent-blue-subtle) !important;
+}
+
+/* ========================================== */
+/* Fluid Tactile Switches (macOS / iOS Physics) */
+/* ========================================== */
+.smooth-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.smooth-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.smooth-switch-track {
+  width: 40px;
+  height: 22px;
+  background-color: var(--bg-surface-elevated);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 9999px;
+  position: relative;
+  transition: background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.24s ease;
+}
+
+.smooth-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s ease;
+}
+
+.smooth-switch:hover .smooth-switch-track {
+  border-color: var(--text-muted);
+}
+
+.smooth-switch input:checked + .smooth-switch-track {
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 14px -2px var(--accent-blue-subtle);
+}
+
+.smooth-switch input:checked + .smooth-switch-track .smooth-switch-thumb {
+  transform: translateX(18px);
+}
+
+/* Elastic squeeze effect on click/touch hold */
+.smooth-switch:active .smooth-switch-thumb {
+  width: 19px;
+}
+
+.smooth-switch input:checked:active + .smooth-switch-track .smooth-switch-thumb {
+  transform: translateX(14px);
+  width: 19px;
+}
+
+/* Viewport Container (Static & Clean) */
+.view-container {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.view-panel {
+  width: 100%;
+}
+
+/* Silky View Entrance Animation */
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-panel:not(.hidden) {
+  animation: viewFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Smooth Modal (Open & Close Animation) */
+.glass-overlay {
+  background: rgba(10, 15, 26, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.light .glass-overlay {
+  background: rgba(241, 245, 249, 0.72);
+}
+
+.glass-overlay.modal-show {
+  opacity: 1;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 28rem;
+  transform: scale(0.94) translateY(10px);
+  opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-overlay.modal-show .modal-content {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+/* Toast Smooth Notification */
+.smooth-toast {
+  animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Surfaces */
+.app-surface {
+  background-color: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+.app-elevated {
+  background-color: var(--bg-surface-elevated);
+  border-color: var(--border-subtle);
+}
+
+/* OAuth Pulsing Indicator */
+.pulsing-indicator {
+  animation: pulseGlow 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.92); }
+}
+
+/* OAuth progress bar smooth fill */
+#oauth-progress-bar {
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* OAuth view transitions */
+#oauth-view-idle,
+#oauth-view-pending {
+  transition: opacity 0.25s ease;
+}
+
+#oauth-view-pending:not(.hidden) {
+  animation: viewFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
